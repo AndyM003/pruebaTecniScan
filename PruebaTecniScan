@@ -1,0 +1,102 @@
+using System;
+using System.Data.SqlClient;
+
+namespace GestionReservasHotel
+{
+    class Program
+    {
+        static string connectionString = "YourConnectionStringHere";
+
+        static void Main(string[] args)
+        {
+            int option = 0;
+
+            do
+            {
+                Console.WriteLine("1. Listar habitaciones disponibles");
+                Console.WriteLine("2. Registrar nueva reserva");
+                Console.WriteLine("3. Consultar reservas de un cliente");
+                Console.WriteLine("4. Salir");
+                option = int.Parse(Console.ReadLine());
+
+                switch (option)
+                {
+                    case 1:
+                        ListarHabitaciones();
+                        break;
+                    case 2:
+                        RegistrarReserva();
+                        break;
+                    case 3:
+                        ConsultarReservasCliente();
+                        break;
+                }
+            } while (option != 4);
+        }
+
+        static void ListarHabitaciones()
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                SqlCommand command = new SqlCommand("SELECT * FROM Habitaciones", connection);
+                SqlDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    Console.WriteLine($"ID: {reader["HabitacionID"]}, Tipo: {reader["TipoHabitacion"]}, Precio: {reader["PrecioPorNoche"]}");
+                }
+            }
+        }
+
+        static void RegistrarReserva()
+        {
+            Console.WriteLine("Ingrese el ID del cliente:");
+            int clienteID = int.Parse(Console.ReadLine());
+
+            Console.WriteLine("Ingrese el ID de la habitación:");
+            int habitacionID = int.Parse(Console.ReadLine());
+
+            Console.WriteLine("Ingrese la fecha de entrada (yyyy-MM-dd):");
+            DateTime fechaEntrada = DateTime.Parse(Console.ReadLine());
+
+            Console.WriteLine("Ingrese la fecha de salida (yyyy-MM-dd):");
+            DateTime fechaSalida = DateTime.Parse(Console.ReadLine());
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                SqlCommand command = new SqlCommand("RegistrarReserva", connection);
+                command.CommandType = System.Data.CommandType.StoredProcedure;
+                command.Parameters.AddWithValue("@ClienteID", clienteID);
+                command.Parameters.AddWithValue("@HabitacionID", habitacionID);
+                command.Parameters.AddWithValue("@FechaEntrada", fechaEntrada);
+                command.Parameters.AddWithValue("@FechaSalida", fechaSalida);
+
+                command.ExecuteNonQuery();
+                Console.WriteLine("Reserva registrada exitosamente.");
+            }
+        }
+
+        static void ConsultarReservasCliente()
+        {
+            Console.WriteLine("Ingrese el ID del cliente:");
+            int clienteID = int.Parse(Console.ReadLine());
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                SqlCommand command = new SqlCommand(
+                    "SELECT * FROM Reservas WHERE ClienteID = @ClienteID AND FechaSalida > GETDATE()",
+                    connection
+                );
+                command.Parameters.AddWithValue("@ClienteID", clienteID);
+                SqlDataReader reader = command.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    Console.WriteLine($"Reserva ID: {reader["ReservaID"]}, Entrada: {reader["FechaEntrada"]}, Salida: {reader["FechaSalida"]}, Total: {reader["Total"]}");
+                }
+            }
+        }
+    }
+}
